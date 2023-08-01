@@ -7,16 +7,17 @@ package transport // import "github.com/open-telemetry/opentelemetry-collector-c
 type Transport string
 
 const (
-	UDP  Transport = "udp"
-	UDP4 Transport = "udp4"
-	UDP6 Transport = "udp6"
+	UDP      Transport = "udp"
+	UDP4     Transport = "udp4"
+	UDP6     Transport = "udp6"
+	UnixGram Transport = "unixgram"
 )
 
 // NewTransport creates a Transport based on the transport string or returns an empty Transport.
 func NewTransport(ts string) Transport {
 	trans := Transport(ts)
 	switch trans {
-	case UDP, UDP4, UDP6:
+	case UDP, UDP4, UDP6, UnixGram:
 		return trans
 	}
 	return Transport("")
@@ -25,7 +26,7 @@ func NewTransport(ts string) Transport {
 // String casts the transport to a String if the Transport is supported. Return an empty Transport overwise.
 func (trans Transport) String() string {
 	switch trans {
-	case UDP, UDP4, UDP6:
+	case UDP, UDP4, UDP6, UnixGram:
 		return string(trans)
 	}
 	return ""
@@ -35,6 +36,15 @@ func (trans Transport) String() string {
 func (trans Transport) IsPacketTransport() bool {
 	switch trans {
 	case UDP, UDP4, UDP6:
+		return true
+	}
+	return false
+}
+
+// Returns true if the transport is unix socket based.
+func (trans Transport) IsUnixTransport() bool {
+	switch trans {
+	case UnixGram:
 		return true
 	}
 	return false

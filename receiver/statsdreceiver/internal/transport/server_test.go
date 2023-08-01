@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/collector/consumer/consumertest"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/internal/common/testutil"
+	statsdtestutil "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/statsdreceiver/internal/testutil"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/statsdreceiver/internal/transport/client"
 )
 
@@ -29,8 +30,15 @@ func Test_Server_ListenAndServe(t *testing.T) {
 		{
 			name:              "udp",
 			getFreeEndpointFn: testutil.GetAvailableLocalNetworkAddress,
-			buildServerFn:     NewUDPServer,
+			buildServerFn:     NewPacketServer,
 			buildClientFn:     client.NewStatsD,
+		},
+		{
+			name:              "unixgram",
+			getFreeEndpointFn: statsdtestutil.CreateTemporarySocket,
+			buildServerFn:     NewPacketServer,
+			buildClientFn:     client.NewStatsD,
+			testSkip:          runtime.GOOS != "linux",
 		},
 	}
 	for _, tt := range tests {
@@ -85,6 +93,7 @@ func Test_Server_ListenAndServe(t *testing.T) {
 	}
 }
 
+// Util to see that the port we are going to use for testing is deterministic and free for us.
 func testFreeEndpoint(t *testing.T, transport string, address string) {
 	t.Helper()
 
@@ -98,6 +107,10 @@ func testFreeEndpoint(t *testing.T, transport string, address string) {
 		// Endpoint should be free.
 		ln0, err0 = net.ListenPacket(transport, address)
 		ln1, err1 = net.ListenPacket(transport, address)
+	}
+	if trans.IsUnixTransport() {
+		// unix sockets rely on tempfiles so they are always free
+		return
 	}
 
 	// Endpoint should be free.

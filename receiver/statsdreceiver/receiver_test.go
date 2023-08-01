@@ -6,6 +6,7 @@ package statsdreceiver
 import (
 	"context"
 	"errors"
+	"runtime"
 	"testing"
 	"time"
 
@@ -20,6 +21,7 @@ import (
 	"go.opentelemetry.io/collector/receiver/receivertest"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/internal/common/testutil"
+	statsdtestutil "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/statsdreceiver/internal/testutil"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/statsdreceiver/internal/transport"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/statsdreceiver/internal/transport/client"
 )
@@ -134,6 +136,24 @@ func Test_statsdreceiver_EndToEnd(t *testing.T) {
 				require.NoError(t, err)
 				return c
 			},
+		},
+		{
+			name: "default_config with UDS listener (unixgram)",
+			addr: statsdtestutil.CreateTemporarySocket(t, ""),
+			configFn: func() *Config {
+				return &Config{
+					NetAddr: confignet.NetAddr{
+						Transport: "unixgram",
+					},
+					AggregationInterval: 4 * time.Second,
+				}
+			},
+			clientFn: func(t *testing.T, addr string) *client.StatsD {
+				c, err := client.NewStatsD("unixgram", addr)
+				require.NoError(t, err)
+				return c
+			},
+			testSkip: runtime.GOOS != "linux",
 		},
 	}
 	for _, tt := range tests {

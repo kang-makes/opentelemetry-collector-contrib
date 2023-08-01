@@ -9,14 +9,17 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"os"
 	"strings"
 
 	"go.opentelemetry.io/collector/consumer"
+	"go.uber.org/multierr"
 )
 
 type packetServer struct {
 	packetConn net.PacketConn
 	transport  Transport
+	address    string
 }
 
 var (
@@ -32,12 +35,20 @@ func NewPacketServer(transport Transport, address string) (Server, error) {
 		return nil, ErrUnsupportedPacketTransport
 	}
 
+	if transport.IsUnixTransport() {
+		err := os.Remove(address)
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			return nil, fmt.Errorf("removing socket failed: %w", err)
+		}
+	}
+
 	conn, err := net.ListenPacket(transport.String(), address)
 	if err != nil {
 		return nil, fmt.Errorf("starting to listen %s: %w", transport.String(), err)
 	}
 
 	return &packetServer{
+		address:    address,
 		packetConn: conn,
 		transport:  transport,
 	}, nil
@@ -56,6 +67,14 @@ func (psrv *packetServer) ListenAndServe(
 	buf := make([]byte, 65527) // max size for udp packet body (assuming ipv6)
 	for {
 		n, addr, err := psrv.packetConn.ReadFrom(buf)
+
+		if _, ok := psrv.packetConn.(*net.UnixConn); ok && addr == nil {
+			addr = &net.UnixAddr{
+				Net:  "unixgram",
+				Name: "UDS",
+			}
+		}
+
 		if n > 0 {
 			bufCopy := make([]byte, n)
 			copy(bufCopy, buf)
@@ -79,7 +98,21 @@ func (psrv *packetServer) ListenAndServe(
 
 // Close closes the server.
 func (psrv *packetServer) Close() error {
-	return u.packetConn.Close()
+	var errs error
+
+	if psrv.transport.IsUnixTransport() {
+		err := os.Remove(psrv.address)
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			errs = multierr.Append(errs, fmt.Errorf("removing socket failed: %w", err))
+		}
+	}
+
+	err := psrv.packetConn.Close()
+	if err != nil {
+		errs = multierr.Append(errs, err)
+	}
+
+	return errs
 }
 
 // handlePacket is helper that parses the buffer and split it line by line to be parsed upstream.
