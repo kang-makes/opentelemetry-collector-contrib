@@ -14,37 +14,37 @@ import (
 	"go.opentelemetry.io/collector/consumer"
 )
 
-type udpServer struct {
+type packetServer struct {
 	packetConn net.PacketConn
 	transport  Transport
 }
 
 var (
 	// Ensure that Server is implemented on UDP Server.
-	_ (Server) = (*udpServer)(nil)
+	_ (Server) = (*packetServer)(nil)
 
 	ErrUnsupportedPacketTransport = errors.New("unsupported Packet transport")
 )
 
-// NewUDPServer creates a transport.Server using UDP as its transport.
-func NewUDPServer(transport Transport, address string) (Server, error) {
+// NewPacketServer creates a transport.Server using transports based on packets.
+func NewPacketServer(transport Transport, address string) (Server, error) {
 	if !transport.IsPacketTransport() {
 		return nil, ErrUnsupportedPacketTransport
 	}
 
 	conn, err := net.ListenPacket(transport.String(), address)
 	if err != nil {
-		return nil, fmt.Errorf("starting to listen %s socket: %w", transport.String(), err)
+		return nil, fmt.Errorf("starting to listen %s: %w", transport.String(), err)
 	}
 
-	return &udpServer{
+	return &packetServer{
 		packetConn: conn,
 		transport:  transport,
 	}, nil
 }
 
 // ListenAndServe starts the server ready to receive metrics.
-func (u *udpServer) ListenAndServe(
+func (psrv *packetServer) ListenAndServe(
 	nextConsumer consumer.Metrics,
 	reporter Reporter,
 	transferChan chan<- Metric,
@@ -55,16 +55,16 @@ func (u *udpServer) ListenAndServe(
 
 	buf := make([]byte, 65527) // max size for udp packet body (assuming ipv6)
 	for {
-		n, addr, err := u.packetConn.ReadFrom(buf)
+		n, addr, err := psrv.packetConn.ReadFrom(buf)
 		if n > 0 {
 			bufCopy := make([]byte, n)
 			copy(bufCopy, buf)
-			u.handlePacket(bufCopy, addr, transferChan)
+			psrv.handlePacket(bufCopy, addr, transferChan)
 		}
 		if err != nil {
 			reporter.OnDebugf("%s Transport (%s) - ReadFrom error: %v",
-				u.transport,
-				u.packetConn.LocalAddr(),
+				psrv.transport,
+				psrv.packetConn.LocalAddr(),
 				err)
 			var netErr net.Error
 			if errors.As(err, &netErr) {
@@ -78,12 +78,12 @@ func (u *udpServer) ListenAndServe(
 }
 
 // Close closes the server.
-func (u *udpServer) Close() error {
+func (psrv *packetServer) Close() error {
 	return u.packetConn.Close()
 }
 
 // handlePacket is helper that parses the buffer and split it line by line to be parsed upstream.
-func (u *udpServer) handlePacket(
+func (psrv *packetServer) handlePacket(
 	data []byte,
 	addr net.Addr,
 	transferChan chan<- Metric,
