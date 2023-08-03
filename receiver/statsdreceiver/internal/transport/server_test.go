@@ -17,7 +17,6 @@ import (
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/internal/common/testutil"
 	statsdtestutil "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/statsdreceiver/internal/testutil"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/statsdreceiver/internal/transport/client"
 )
 
 func Test_Server_ListenAndServe(t *testing.T) {
@@ -25,20 +24,20 @@ func Test_Server_ListenAndServe(t *testing.T) {
 		name              string
 		buildServerFn     func(transport Transport, addr string) (Server, error)
 		getFreeEndpointFn func(t testing.TB, transport string) string
-		buildClientFn     func(transport string, address string) (*client.StatsD, error)
+		buildClientFn     func(transport string, address string) (*statsdtestutil.StatsDTestClient, error)
 		testSkip          bool
 	}{
 		{
 			name:              "udp",
 			getFreeEndpointFn: testutil.GetAvailableLocalNetworkAddress,
 			buildServerFn:     NewPacketServer,
-			buildClientFn:     client.NewStatsD,
+			buildClientFn:     statsdtestutil.NewStatsDTestClient,
 		},
 		{
 			name:              "unixgram",
 			getFreeEndpointFn: statsdtestutil.CreateTemporarySocket,
 			buildServerFn:     NewPacketServer,
-			buildClientFn:     client.NewStatsD,
+			buildClientFn:     statsdtestutil.NewStatsDTestClient,
 			// Tests on Mac/Windows give a "bind: invalid argument" error as unix sockets are not supported.
 			testSkip: runtime.GOOS != "linux",
 		},
@@ -74,7 +73,7 @@ func Test_Server_ListenAndServe(t *testing.T) {
 			gc, err := tt.buildClientFn(tt.name, addr)
 			require.NoError(t, err)
 			require.NotNil(t, gc)
-			err = gc.SendMetric(client.Metric{
+			err = gc.SendMetric(statsdtestutil.Metric{
 				Name:  "test.metric",
 				Value: "42",
 				Type:  "c",

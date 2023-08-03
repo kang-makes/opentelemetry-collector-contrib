@@ -1,4 +1,7 @@
-package testutil
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package testutil // import "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/statsdreceiver/transport/testutil"
 
 import (
 	"crypto/rand"

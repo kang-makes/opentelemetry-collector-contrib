@@ -23,7 +23,6 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/internal/common/testutil"
 	statsdtestutil "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/statsdreceiver/internal/testutil"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/statsdreceiver/internal/transport"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/statsdreceiver/internal/transport/client"
 )
 
 func Test_statsdreceiver_New(t *testing.T) {
@@ -117,7 +116,7 @@ func Test_statsdreceiver_EndToEnd(t *testing.T) {
 		name     string
 		addr     string
 		configFn func() *Config
-		clientFn func(t *testing.T, addr string) *client.StatsD
+		clientFn func(t *testing.T, addr string) *statsdtestutil.StatsDTestClient
 		testSkip bool
 	}{
 		{
@@ -132,8 +131,8 @@ func Test_statsdreceiver_EndToEnd(t *testing.T) {
 					AggregationInterval: 4 * time.Second,
 				}
 			},
-			clientFn: func(t *testing.T, addr string) *client.StatsD {
-				c, err := client.NewStatsD("udp", addr)
+			clientFn: func(t *testing.T, addr string) *statsdtestutil.StatsDTestClient {
+				c, err := statsdtestutil.NewStatsDTestClient("udp", addr)
 				require.NoError(t, err)
 				return c
 			},
@@ -149,8 +148,8 @@ func Test_statsdreceiver_EndToEnd(t *testing.T) {
 					AggregationInterval: 4 * time.Second,
 				}
 			},
-			clientFn: func(t *testing.T, addr string) *client.StatsD {
-				c, err := client.NewStatsD("unixgram", addr)
+			clientFn: func(t *testing.T, addr string) *statsdtestutil.StatsDTestClient {
+				c, err := statsdtestutil.NewStatsDTestClient("unixgram", addr)
 				require.NoError(t, err)
 				return c
 			},
@@ -181,7 +180,7 @@ func Test_statsdreceiver_EndToEnd(t *testing.T) {
 
 			statsdClient := tt.clientFn(t, tt.addr)
 
-			statsdMetric := client.Metric{
+			statsdMetric := statsdtestutil.Metric{
 				Name:  "test.metric",
 				Value: "42",
 				Type:  "c",

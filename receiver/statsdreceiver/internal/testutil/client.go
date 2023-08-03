@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package client // import "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/statsdreceiver/internal/transport/client"
+package testutil // import "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/statsdreceiver/internal/transport/testutil"
 
 import (
 	"fmt"
@@ -10,17 +10,17 @@ import (
 	"strings"
 )
 
-// StatsD defines the properties of a StatsD connection.
-type StatsD struct {
+// StatsDTestClient defines the properties of a StatsD connection.
+type StatsDTestClient struct {
 	transport string
 	address   string
 	conn      io.Writer
 }
 
-// NewStatsD creates a new StatsD instance to support the need for testing
+// NewStatsDTestClient creates a new StatsDTestClient instance to support the need for testing
 // the statsdreceiver package and is not intended/tested to be used in production.
-func NewStatsD(transport string, address string) (*StatsD, error) {
-	statsd := &StatsD{
+func NewStatsDTestClient(transport string, address string) (*StatsDTestClient, error) {
+	statsd := &StatsDTestClient{
 		transport: transport,
 		address:   address,
 	}
@@ -33,8 +33,8 @@ func NewStatsD(transport string, address string) (*StatsD, error) {
 	return statsd, nil
 }
 
-// connect populates the StatsD.conn
-func (s *StatsD) connect() error {
+// connect populates the StatsDTestClient.conn
+func (s *StatsDTestClient) connect() error {
 	switch s.transport {
 	case "udp":
 		udpAddr, err := net.ResolveUDPAddr(s.transport, s.address)
@@ -61,8 +61,8 @@ func (s *StatsD) connect() error {
 	return nil
 }
 
-// Disconnect closes the StatsD.conn.
-func (s *StatsD) Disconnect() error {
+// Disconnect closes the StatsDTestClient.conn.
+func (s *StatsDTestClient) Disconnect() error {
 	var err error
 	if cl, ok := s.conn.(io.Closer); ok {
 		err = cl.Close()
@@ -71,23 +71,11 @@ func (s *StatsD) Disconnect() error {
 	return err
 }
 
-// SendMetric sends the input metric to the StatsD connection.
-func (s *StatsD) SendMetric(metric Metric) error {
+// SendMetric sends the input metric to the StatsDTestClient connection.
+func (s *StatsDTestClient) SendMetric(metric Metric) error {
 	_, err := io.Copy(s.conn, strings.NewReader(metric.String()))
 	if err != nil {
 		return fmt.Errorf("send metric on test client: %w", err)
 	}
 	return nil
-}
-
-// Metric contains the metric fields for a StatsD message.
-type Metric struct {
-	Name  string
-	Value string
-	Type  string
-}
-
-// String formats a Metric into a StatsD message.
-func (m Metric) String() string {
-	return fmt.Sprintf("%s:%s|%s", m.Name, m.Value, m.Type)
 }
