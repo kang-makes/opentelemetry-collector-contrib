@@ -118,6 +118,7 @@ func Test_statsdreceiver_EndToEnd(t *testing.T) {
 		addr     string
 		configFn func() *Config
 		clientFn func(t *testing.T, addr string) *client.StatsD
+		testSkip bool
 	}{
 		{
 			name: "default_config with 4s interval",
@@ -153,10 +154,15 @@ func Test_statsdreceiver_EndToEnd(t *testing.T) {
 				require.NoError(t, err)
 				return c
 			},
+			// Tests on Mac/Windows give a "bind: invalid argument" error as unix sockets are not supported.
 			testSkip: runtime.GOOS != "linux",
 		},
 	}
 	for _, tt := range tests {
+		if tt.testSkip {
+			continue
+		}
+
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := tt.configFn()
 			cfg.NetAddr.Endpoint = tt.addr

@@ -26,6 +26,7 @@ func Test_Server_ListenAndServe(t *testing.T) {
 		buildServerFn     func(transport Transport, addr string) (Server, error)
 		getFreeEndpointFn func(t testing.TB, transport string) string
 		buildClientFn     func(transport string, address string) (*client.StatsD, error)
+		testSkip          bool
 	}{
 		{
 			name:              "udp",
@@ -38,10 +39,15 @@ func Test_Server_ListenAndServe(t *testing.T) {
 			getFreeEndpointFn: statsdtestutil.CreateTemporarySocket,
 			buildServerFn:     NewPacketServer,
 			buildClientFn:     client.NewStatsD,
-			testSkip:          runtime.GOOS != "linux",
+			// Tests on Mac/Windows give a "bind: invalid argument" error as unix sockets are not supported.
+			testSkip: runtime.GOOS != "linux",
 		},
 	}
 	for _, tt := range tests {
+		if tt.testSkip {
+			continue
+		}
+
 		t.Run(tt.name, func(t *testing.T) {
 			trans := Transport(tt.name)
 			addr := tt.getFreeEndpointFn(t, tt.name)

@@ -50,7 +50,7 @@ func (s *StatsD) connect() error {
 		if err != nil {
 			return err
 		}
-		s.Conn, err = net.DialUnix(s.transport, nil, unixAddr)
+		s.conn, err = net.DialUnix(s.transport, nil, unixAddr)
 		if err != nil {
 			return err
 		}
