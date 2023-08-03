@@ -68,8 +68,8 @@ func New(
 }
 
 func buildTransportServer(config Config) (transport.Server, error) {
-	// TODO: Add TCP transport implementation
 	trans := transport.NewTransport(strings.ToLower(config.NetAddr.Transport))
+	// TODO: Add TCP transport implementation
 	if trans.IsPacketTransport() {
 		return transport.NewPacketServer(trans, config.NetAddr.Endpoint)
 	}

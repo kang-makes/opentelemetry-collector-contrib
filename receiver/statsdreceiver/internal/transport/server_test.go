@@ -98,7 +98,7 @@ func Test_Server_ListenAndServe(t *testing.T) {
 	}
 }
 
-// Util to see that the port we are going to use for testing is deterministic and free for us.
+// testFreeEndpoint is a helper to check if the port we are going to use for testing is deterministic and free for us.
 func testFreeEndpoint(t *testing.T, transport string, address string) {
 	t.Helper()
 
@@ -108,14 +108,14 @@ func testFreeEndpoint(t *testing.T, transport string, address string) {
 	trans := NewTransport(transport)
 	require.NotEqual(t, trans, Transport(""))
 
+	if trans.IsUnixTransport() {
+		// unix sockets rely on tempfiles so they are always free
+		return
+	}
 	if trans.IsPacketTransport() {
 		// Endpoint should be free.
 		ln0, err0 = net.ListenPacket(transport, address)
 		ln1, err1 = net.ListenPacket(transport, address)
-	}
-	if trans.IsUnixTransport() {
-		// unix sockets rely on tempfiles so they are always free
-		return
 	}
 
 	// Endpoint should be free.

@@ -68,7 +68,7 @@ func (psrv *packetServer) ListenAndServe(
 	for {
 		n, addr, err := psrv.packetConn.ReadFrom(buf)
 
-		if _, ok := psrv.packetConn.(*net.UnixConn); ok && addr == nil {
+		if psrv.transport.IsUnixTransport() && addr == nil {
 			addr = &net.UnixAddr{
 				Net:  "unixgram",
 				Name: "UDS",
